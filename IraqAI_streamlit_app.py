@@ -1,71 +1,95 @@
-# IraqAI_streamlit_app.py
+
 import streamlit as st
 import requests
 import os
+import random
 
-# إعداد الصفحة
-st.set_page_config(page_title="🇶🇼 الحجية العراقية - Hajiya AI", layout="centered")
-st.markdown("""
-<h1 style='text-align: center;'>🇶🇼 دردشة مع الحجية العراقية</h1>
-<p style='text-align: center; font-size: 15px;'>🌐 <a href='https://www.instagram.com/hajiya.iraq' target='_blank'>تابعنا على إنستغرام</a> | <a href='https://t.me/HajiyaIraq' target='_blank'>تيليجرام</a></p>
-""", unsafe_allow_html=True)
+st.set_page_config(page_title="دردشة مع الحجية العراقية", layout="centered")
 
-# خيارات الحجية
-st.divider()
-purpose = st.radio(
-    "🌺 شتريد من الحجية؟",
-    [
-        "معرفة موعد الزواج",
-        "هل هذا/هذه الشخصية جيدة؟",
-        "نعم أو لا"
-    ],
-    index=None,
-    horizontal=True
-)
-st.divider()
+st.title("🇮🇶 دردشة مع الحجية العراقية")
 
-# إدخال متغيرات السؤال
-user_input = ""
-if purpose == "معرفة موعد الزواج":
-    age = st.text_input("العمر")
-    education = st.text_input("الدراسة")
-    location = st.text_input("من وين انتي/انته؟")
-    routine = st.text_input("شو روتينك باليوم؟")
-    user_input = f"عُمري {age}، دراستي {education}، ساكنة في {location}، روتيني اليومي: {routine}. متى أتزوج؟"
+menu = st.sidebar.radio("اختار القسم:", ["💬 دردشة", "🍽️ وصفات", "🔮 حظك اليوم", "🙋‍♀️ اسألي الحجية"])
 
-elif purpose == "هل هذا/هذه الشخصية جيدة؟":
-    name = st.text_input("الاسم")
-    height = st.text_input("الطول")
-    other = st.text_input("معلومات ثانية")
-    user_input = f"الاسم {name}، طوله {height}، ومعلومات إضافية: {other}. هل هو/هي جيد/ة؟"
+# ------------------------
+# 1. Chat Section
+# ------------------------
+if menu == "💬 دردشة":
+    st.markdown("**يمّه، اكتبي سؤالك هنا والحجية ترد عليك:**")
+    user_input = st.text_input("✍️ سؤالك:")
+    if st.button("أرسل 💌"):
+        if user_input.strip() != "":
+            with st.spinner("الحجية قاعدة تفكر..."):
+                api_key = os.getenv("OPENROUTER_API_KEY")
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": "deepseek/deepseek-r1:free",
+                    "messages": [{"role": "user", "content": user_input}]
+                }
+                try:
+                    response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+                    data = response.json()
+                    if "choices" in data:
+                        ai_reply = data["choices"][0]["message"]["content"]
+                        st.success(ai_reply)
+                    else:
+                        st.error("❌ ما قدرت أجاوب، جرّبي مرة ثانية.")
+                except Exception as e:
+                    st.error(f"❌ صار خطأ: {e}")
 
-elif purpose == "نعم أو لا":
-    user_input = st.text_input("🔹 اكتب/ي سؤالك هنا:")
+# ------------------------
+# 2. Recipes Section
+# ------------------------
+elif menu == "🍽️ وصفات":
+    st.markdown("**اختاري أكلة عراقية وتعلمي طريقة تحضيرها:**")
+    recipes = {
+        "دولمة": "المكونات: ورق عنب، رز، لحم مفروم، بهارات...
+الخطوات: ...",
+        "تشريب لحم": "المكونات: لحم، خبز عراقي، بصل، طماطم...
+الخطوات: ...",
+        "برياني": "المكونات: رز، دجاج، بهارات برياني، بطاطا...
+الخطوات: ...",
+        "كبة حلب": "المكونات: برغل، لحم، بصل...
+الخطوات: ...",
+        "بامية": "المكونات: بامية، لحم، طماطم...
+الخطوات: ...",
+        "قوزي": "المكونات: رز، لحم غنم، بهارات...
+الخطوات: ...",
+        "مقلوبة": "المكونات: رز، باذنجان، بطاطا...
+الخطوات: ...",
+        "مرق السبانغ": "المكونات: سبانغ، لحم، حمص...
+الخطوات: ...",
+        "تشريب دجاج": "المكونات: دجاج، خبز عراقي، طماطم...
+الخطوات: ...",
+        "كبة موصلية": "المكونات: برغل، لحم، توابل...
+الخطوات: ..."
+    }
+    selected = st.selectbox("اختاري أكلة:", list(recipes.keys()))
+    if st.button("شوفي الوصفة 🍴"):
+        st.info(recipes[selected])
 
-# أزرار
-col1, col2 = st.columns([1, 5])
-with col1:
-    if st.button("🖊️ إرسال"):
-        if user_input:
-            # أرسل للنموذج
-            api_key = os.getenv("OPENROUTER_API_KEY")
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": "deepseek/deepseek-r1:free",
-                "messages": [{"role": "user", "content": user_input}]
-            }
-            try:
-                response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
-                data = response.json()
-                if "choices" in data:
-                    ai_reply = data["choices"][0]["message"]["content"]
-                    st.success(ai_reply)
-                else:
-                    st.error("❌ ما كدرت ألكي رد!")
-            except Exception as e:
-                st.error(f"خطأ: {e}")
-with col2:
-    st.button("مسح المحادثة", on_click=lambda: st.experimental_rerun())
+# ------------------------
+# 3. Luck of the Day
+# ------------------------
+elif menu == "🔮 حظك اليوم":
+    luck = [
+        "اليوم حظج حلو، استغلي الفرص يمّه ✨",
+        "نامي واصحي، باجر أحسن إن شاء الله 🌙",
+        "كو رزق بالطريق... استعدي له 🙏",
+        "الحظ متوسط اليوم، بس انتي قدها 💪",
+        "راح تسمعين خبر يفرحج 💌"
+    ]
+    if st.button("احسبيلي حظي اليوم ✨"):
+        st.success(random.choice(luck))
+
+# ------------------------
+# 4. Yes/No Oracle
+# ------------------------
+elif menu == "🙋‍♀️ اسألي الحجية":
+    st.markdown("**اكتبي سؤال يكون جوابه نعم أو لا:**")
+    yn_question = st.text_input("🔍 سؤالك:")
+    if st.button("اسألي 🧿"):
+        answer = random.choice(["اي والله", "لا حبيبة الحجية", "مبين عليه نعم", "مو وقته هسة", "الله أعلم، بس إن شاء الله خير"])
+        st.markdown(f"**الحجية تقول:** {answer}")
