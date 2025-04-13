@@ -1,47 +1,54 @@
-
 import streamlit as st
 import requests
+import os
 
-st.set_page_config(page_title="Iraq AI - دردش مع شخصية عراقية 🇮🇶")
+# إعداد الصفحة
+st.set_page_config(page_title="Iraq AI – دردشة مع الحجية العراقية", layout="centered")
+st.title("🇮🇶 Iraq AI – دردشة مع الحجية العراقية")
 
-st.title("🇮🇶 Iraq AI - دردش مع شخصية عراقية")
+# رابط تابعنا
+st.markdown("[📸 تابعنا على إنستغرام](https://www.instagram.com/hajiya.iraq) | [💬 تابعنا على تيليجرام](https://t.me/HajiyaIraq)", unsafe_allow_html=True)
 
-characters = ["الحجية أم فوزي", "العسكري أبو سيف", "اليوتيوبر حسون تيك", "الشاب منتظر", "الطالبة زينب"]
-selected_character = st.selectbox("🧕🏽 اختار شخصية", characters)
+# صندوق السؤال
+user_input = st.text_input("✍️ اكتبي سؤالك هنا:", placeholder="مثلاً: شنو رأيك بهالشاب؟")
 
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
+# خيارات "قراءة الفنجان"
+mood = st.radio("🔮 قراءة الفنجان (اختياري):", ["لا أريد", "احجيلي عن حظي", "راح يرجع؟", "أكدر أثق بي؟", "نعم أو لا؟"])
 
-if st.button("🧹 مسح المحادثة"):
-    st.session_state.chat_history = []
-
-question = st.text_input("✍️ اكتب سؤالك هنا")
-
-headers = {
-    'Authorization': f'Bearer {st.secrets["OPENROUTER_API_KEY"]}',
-    'Content-Type': 'application/json',
-}
-
+# زر الإرسال
 if st.button("🚀 أرسل"):
-    with st.spinner('جارٍ الحصول على الرد...'):
-        data = {
-            'model': 'deepseek/deepseek-r1:free',
-            'messages': [
-                {"role": "system", "content": f"تحدث بأسلوب عراقي شعبي كشخصية {selected_character}"},
-                {"role": "user", "content": question}
-            ]
+    if not user_input.strip():
+        st.warning("يرجى كتابة سؤال.")
+    else:
+        # نص الطلب المُرسل
+        full_prompt = f"""
+أنت شخصية الحجية أم فوزي. امرأة عراقية كبيرة بالعمر، تحب تنصح، تنكت، وتتكلم باللهجة العراقية. تجاوب دائماً بطريقة شعبية طريفة، لكن بيها حكمة ودفء.
+
+إذا المستخدم اختار قراءة فنجان، اضف لمستك كقارئة فنجان شعبية وتكلمي كأنك تشوفين الفنجان:
+
+اختيار المستخدم لقراءة الفنجان: {mood}
+سؤال المستخدم: {user_input}
+"""
+
+        # إرسال الطلب إلى OpenRouter
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "deepseek/deepseek-r1:free",
+            "messages": [{"role": "user", "content": full_prompt}]
         }
 
-        response = requests.post('https://openrouter.ai/api/v1/chat/completions', json=data, headers=headers)
+        try:
+            response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+            data = response.json()
 
-        if response.status_code == 200:
-            answer = response.json()['choices'][0]['message']['content']
-            st.session_state.chat_history.append((selected_character, question, answer))
-        else:
-            st.error("❌ هناك خطأ في استجابة النموذج")
-
-for char, q, a in reversed(st.session_state.chat_history):
-    st.markdown(f"**{char}:** {q}")
-    st.markdown(f"🔸 {a}")
-
-st.markdown("[📸 تابعنا على إنستغرام](https://www.instagram.com/husseinsaad.iq/)")
+            if "choices" in data:
+                ai_reply = data["choices"][0]["message"]["content"]
+                st.success(ai_reply)
+            else:
+                st.error("❌ لم يتم العثور على رد من النموذج.")
+        except Exception as e:
+            st.error(f"حدث خطأ: {e}")
